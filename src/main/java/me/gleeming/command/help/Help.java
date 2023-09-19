@@ -17,4 +17,10 @@ public @interface Help {
      * The permission to get the help message
      */
     String permission() default "";
+
+    /**
+     * Gets the method to run if the sender doesn't have permission
+     * Method is required to have a CommandSender parameter
+     */
+    String noPermissionMethod() default "";
 }

@@ -9,4 +9,5 @@ public class HelpNode {
     private final String[] names;
     private final String permission;
     private final Method method;
+    private final String noPermissionMethod;
 }

@@ -12,8 +12,11 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static me.gleeming.command.CommandHandler.extractMethod;
 
 public class BukkitCommand extends Command {
     @Getter private static final HashMap<String, BukkitCommand> commands = new HashMap<>();
@@ -44,6 +47,14 @@ public class BukkitCommand extends Command {
             HelpNode helpNode = node.getHelpNodes().get(0);
 
             if(!helpNode.getPermission().isEmpty() && !sender.hasPermission(helpNode.getPermission())) {
+                if(!helpNode.getNoPermissionMethod().isEmpty()) {
+                    Method noPermission = extractMethod(helpNode.getNoPermissionMethod(), helpNode.getParentClass());
+                    if (noPermission != null) {
+                        noPermission.invoke(helpNode.getParentClass(), sender);
+                        return true;
+                    }
+                }
+
                 sender.sendMessage(ChatColor.RED + "I'm sorry, although you do not have permission to execute this command.");
                 return false;
             }

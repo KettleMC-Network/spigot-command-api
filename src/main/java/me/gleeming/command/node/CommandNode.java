@@ -14,9 +14,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static me.gleeming.command.CommandHandler.extractMethod;
 
 @Getter
 public class CommandNode {
@@ -28,6 +31,9 @@ public class CommandNode {
     private final String permission;
     private final String description;
     private final boolean async;
+    private final Method noPermissionMethod;
+    private final Method playerOnlyMethod;
+    private final Method consoleOnlyMethod;
 
     // Executor information
     private final boolean playerOnly;
@@ -53,6 +59,9 @@ public class CommandNode {
         this.async = command.async();
         this.playerOnly = command.playerOnly();
         this.consoleOnly = command.consoleOnly();
+        this.noPermissionMethod = command.noPermissionMethod().isEmpty() ? null : extractMethod(command.noPermissionMethod(), parentClass);
+        this.playerOnlyMethod = command.playerOnlyMethod().isEmpty() ? null : extractMethod(command.playerOnlyMethod(), parentClass);
+        this.consoleOnlyMethod = command.consoleOnlyMethod().isEmpty() ? null : extractMethod(command.consoleOnlyMethod(), parentClass);
 
         // Reflection
         this.parentClass = parentClass;
@@ -149,16 +158,40 @@ public class CommandNode {
      */
     public void sendUsageMessage(CommandSender sender) {
         if(consoleOnly && sender instanceof Player) {
+            if (consoleOnlyMethod != null) {
+                try {
+                    consoleOnlyMethod.invoke(parentClass, sender);
+                    return;
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    CommandHandler.getPlugin().getLogger().severe("Failed to execute player only method for command " + names.get(0) + " in class " + parentClass.getClass().getName() + "!");
+                }
+            }
             sender.sendMessage(ChatColor.RED + "This command can only be executed by console.");
             return;
         }
 
-        if(playerOnly && sender instanceof ConsoleCommandSender) {
+        if(playerOnly && !(sender instanceof Player)) {
+            if (playerOnlyMethod != null) {
+                try {
+                    playerOnlyMethod.invoke(parentClass, sender);
+                    return;
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    CommandHandler.getPlugin().getLogger().severe("Failed to execute player only method for command " + names.get(0) + " in class " + parentClass.getClass().getName() + "!");
+                }
+            }
             sender.sendMessage(ChatColor.RED + "You must be a player to execute this command.");
             return;
         }
 
         if(!permission.equals("") && !sender.hasPermission(permission)) {
+            if (noPermissionMethod != null) {
+                try {
+                    noPermissionMethod.invoke(parentClass, sender);
+                    return;
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    CommandHandler.getPlugin().getLogger().severe("Failed to execute no permission method for command " + names.get(0) + " in class " + parentClass.getClass().getName() + "!");
+                }
+            }
             sender.sendMessage(ChatColor.RED + "I'm sorry, although you do not have permission to execute this command.");
             return;
         }

@@ -9,8 +9,10 @@ import me.gleeming.command.help.HelpNode;
 import me.gleeming.command.node.CommandNode;
 import me.gleeming.command.paramter.ParamProcessor;
 import me.gleeming.command.paramter.Processor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
 
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class CommandHandler {
@@ -53,7 +55,7 @@ public class CommandHandler {
             Help help = method.getAnnotation(Help.class);
             if(help == null) return;
 
-            HelpNode helpNode = new HelpNode(commandClass, help.names(), help.permission(), method);
+            HelpNode helpNode = new HelpNode(commandClass, help.names(), help.permission(), method, help.noPermissionMethod());
             CommandNode.getNodes().forEach(node -> node.getNames().forEach(name -> Arrays.stream(help.names())
                     .map(String::toLowerCase)
                     .filter(helpName -> name.toLowerCase().startsWith(helpName))
@@ -74,6 +76,14 @@ public class CommandHandler {
                     try { ParamProcessor.createProcessor((Processor<?>) info.load().newInstance());
                     } catch(Exception exception) { exception.printStackTrace(); }
                 });
+    }
+
+    public static Method extractMethod(String methodName, Object parentClass) {
+        try {
+            return parentClass.getClass().getDeclaredMethod(methodName, CommandSender.class);
+        } catch (NoSuchMethodException e) {
+            return null;
+        }
     }
 
 }
